@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>smith patch canvas</title>
+  <script src="/theme.js"></script>
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/instrument.css">
+  <link rel="stylesheet" href="/theme.css">
+</head>
+<body>
+  <div id="app" class="shell" aria-busy="true" data-startup>
+    <nav class="location-bar" aria-label="location">
+      <a id="back-project" class="back-project" href="/" aria-label="back to project" hidden>← <span>home</span></a>
+      <button id="toggle-navigator" aria-controls="navigator" aria-expanded="false" hidden>projects</button>
+      <div id="breadcrumbs" class="breadcrumbs"><a class="wordmark" href="/">smith</a></div>
+      <div class="identity" hidden><div><strong id="patch-name">smith</strong><span id="patch-root">opening workspace…</span></div></div>
+      <nav id="global-links" aria-label="application"><a href="/?screen=integrations">integrations</a><a href="/?screen=settings">settings</a></nav>
+      <span id="execution-kind" class="execution-kind" hidden></span>
+      <button id="theme-toggle" type="button" aria-pressed="false">dark mode</button>
+    </nav>
+    <footer class="transport" hidden>
+      <div class="transport-controls" aria-label="patch transport">
+        <button id="new-run" class="key">start run</button>
+        <button id="pause-run" title="pause scheduling; already running work may finish">Ⅱ pause</button>
+        <button id="resume-run">▷ resume</button>
+        <button id="stop-run" class="stop" title="stop execution; completed side effects are not undone">□ stop</button>
+        <button id="add-node">+ add node</button>
+      </div>
+      <div class="revision-strip">
+        <span id="run-status" class="status-lamp">offline</span>
+        <span id="revision">no live revision</span>
+      </div>
+      <div id="view-modes" class="view-modes"><button id="edit-patch">edit patch</button><button id="watch-run">watch run</button><button id="live-edit" aria-pressed="false" hidden>enable live edits</button></div>
+      <button id="toggle-sources" class="source-toggle" aria-controls="source-rack" aria-expanded="false">sources</button>
+      <div class="run-strip">
+        <select id="run-select" aria-label="patch run"></select>
+      </div>
+      <button id="show-history" class="quiet" aria-pressed="false">history</button>
+      <div class="view-tools"><button id="zoom-out" aria-label="zoom out">−</button><span id="zoom-level">100%</span><button id="zoom-in" aria-label="zoom in">+</button><button id="fit-patch">fit</button></div>
+    </footer>
+
+    <div class="workspace">
+      <aside id="navigator" class="navigator" aria-label="projects and patches" hidden>
+        <div class="navigator-head"><h2>projects</h2><button id="new-project">+ new</button></div>
+        <div id="project-tree"></div>
+        <button id="refresh-library" class="quiet">refresh projects & runs</button>
+      </aside>
+      <div class="workspace-main">
+      <section id="page-loading" class="page-loading" role="status">
+        <p id="startup-message">opening smith…</p>
+        <button id="startup-retry" type="button" hidden>try again</button>
+      </section>
+      <section id="home-overview" class="project-overview home-overview" aria-label="smith home" hidden></section>
+      <section id="project-overview" class="project-overview" aria-label="project overview" hidden></section>
+    <main class="workbench" hidden>
+      <aside id="source-rack" class="source-rack" aria-label="work and memory sources" hidden>
+        <header class="source-rack-head">
+          <div><span class="rack-kicker">input rack</span><h2>sources</h2></div>
+          <button id="close-sources" class="quiet" aria-label="close sources">close</button>
+        </header>
+        <div class="source-tabs" role="tablist" aria-label="source kind">
+          <button id="source-tab-work" role="tab" aria-controls="source-panel" aria-selected="true" data-source-tab="work">work</button>
+          <button id="source-tab-memory" role="tab" aria-controls="source-panel" aria-selected="false" data-source-tab="memory">memory</button>
+        </div>
+        <div class="source-management"><a id="open-source-app" target="_blank" rel="noopener noreferrer" hidden></a><span id="source-app-unavailable"></span></div>
+        <section id="source-panel" class="source-panel" role="tabpanel" aria-live="polite"></section>
+      </aside>
+      <section class="patch-viewport" id="patch-viewport" aria-label="live patch canvas">
+        <div class="patch-world" id="patch-world">
+          <svg id="cord-layer" class="cord-layer" aria-label="patch wires"></svg>
+          <div id="node-layer" class="node-layer"></div>
+        </div>
+          <div id="empty-patch" class="empty-patch" hidden>
+            <strong>nothing is patched yet</strong>
+            <span>add a node to begin shaping the signal path.</span>
+          </div>
+        <div class="canvas-key" aria-label="cord legend">
+          <span><i class="message-swatch"></i>message</span>
+          <span><i class="bang-swatch"></i>bang</span>
+          <span>middle drag</span>
+          <span>wheel zoom</span>
+        </div>
+      </section>
+
+      <aside class="scope" aria-label="patch inspector" hidden>
+        <section id="gate-rack" class="gate-rack" hidden>
+          <div class="scope-heading"><h2>human decisions</h2><span id="gate-count"></span></div>
+          <div id="gates"></div>
+        </section>
+        <section class="inspector">
+          <div class="scope-heading"><h2 id="inspector-title">inspect</h2><button id="clear-selection" class="quiet" aria-label="close inspector">×</button></div>
+          <div id="inspector-content" class="inspector-content">
+            <p class="empty-copy">select a node, cord, port, or event.</p>
+          </div>
+        </section>
+        <section class="history" hidden>
+          <div class="scope-heading"><h2>signal history</h2><span id="event-cursor">0</span></div>
+          <div id="events" class="event-tape" aria-live="polite"></div>
+        </section>
+      </aside>
+    </main>
+      </div>
+    </div>
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
+  </div>
+
+  <dialog id="gate-dialog" aria-labelledby="gate-title">
+    <div class="dialog-heading"><h2 id="gate-title">review decision</h2><button id="close-gate" type="button">close</button></div>
+    <p id="gate-location"></p>
+    <h3 id="gate-prompt"></h3>
+    <p id="gate-meta"></p>
+    <div id="gate-evidence"></div>
+    <details id="gate-payload"><summary>open complete payload</summary><pre id="gate-payload-text"></pre></details>
+    <p id="gate-result" role="status"></p>
+    <p id="gate-error" role="alert" hidden></p>
+    <form id="gate-decision-form">
+      <label for="gate-reason">reason for your decision (required)</label>
+      <textarea id="gate-reason" required rows="4"></textarea>
+      <p id="gate-help">both approval and rejection record your reason in the run history.</p>
+      <div class="gate-actions"><button id="gate-approve" type="submit" value="approve">approve</button><button id="gate-reject" type="submit" value="reject">reject</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="create-dialog" aria-labelledby="create-title">
+    <form id="create-form">
+      <div class="dialog-heading"><h2 id="create-title">new project</h2><button id="close-create" type="button">cancel</button></div>
+      <p id="create-description"></p>
+      <label>name<input id="create-name" name="name" required maxlength="64" pattern="[a-z0-9][a-z0-9_-]*" placeholder="experiments"></label>
+      <p id="create-error" role="alert" hidden></p>
+      <button id="create-submit" class="key">create project</button>
+    </form>
+  </dialog>
+
+  <dialog id="harness-dialog" class="harness-sheet" aria-labelledby="harness-title">
+    <header class="dialog-heading"><h2 id="harness-title">prepare run</h2><button id="close-harness" class="quiet">cancel</button></header>
+    <div id="harness-preview" aria-live="polite"></div>
+    <footer class="harness-actions"><p id="harness-error" role="alert" hidden></p><button id="retry-harness" hidden>prepare again</button><button id="reconnect-harness" hidden>reconnect to run</button><button id="start-harness" class="key" disabled>start run</button></footer>
+  </dialog>
+  <dialog id="node-dialog">
+    <form id="node-form" method="dialog">
+      <div class="dialog-heading"><h2>place a node</h2><button type="button" id="close-node-dialog" class="quiet">close</button></div>
+      <label>node id<input name="id" required pattern="[A-Za-z0-9][A-Za-z0-9._-]*" placeholder="critic"></label>
+      <label>kind<select name="kind"><option value="runtime">runtime</option><option value="builtin">builtin</option><option value="subpatch">subpatch</option></select></label>
+      <div class="kind-fields runtime-fields">
+        <label>runtime<select name="runtime"><option>claude</option><option>codex</option><option>grok</option></select></label>
+        <label>model<input name="model" placeholder="model name"></label>
+        <label>profile<select name="profile"><option>reason</option><option>inspect</option><option>work</option></select></label>
+      </div>
+      <div class="kind-fields builtin-fields" hidden>
+        <label>builtin<select name="builtin"><option>passthrough</option><option>switch</option><option>router</option><option>human_gate</option><option>capability_assert</option><option>workspace_handoff</option></select></label>
+      </div>
+      <div class="kind-fields subpatch-fields" hidden><label>task tree path<input name="subpatch" placeholder="flows/review"></label></div>
+      <fieldset>
+        <legend>starter ports</legend>
+        <label>signal kind<select name="port_kind"><option value="message">message</option><option value="bang">bang</option></select></label>
+        <label>inlet<input name="inlet" value="in"></label>
+        <label>outlet<input name="outlet" value="out"></label>
+      </fieldset>
+      <button class="key" value="place">place node</button>
+    </form>
+  </dialog>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

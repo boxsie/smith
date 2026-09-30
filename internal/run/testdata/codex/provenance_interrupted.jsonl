@@ -1,0 +1,3 @@
+{"type":"thread.started","thread_id":"thread-interrupted"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"command-interrupted","type":"command_execution","command":"bash -lc 'worker --token should-not-survive'","aggregated_output":"","exit_code":null,"status":"in_progress"}}

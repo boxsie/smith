@@ -1,0 +1,4 @@
+description: "Search the public web and return structured result rows"
+type: native
+timeout: 30s
+cache: never

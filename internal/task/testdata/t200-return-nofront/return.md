@@ -1,0 +1,1 @@
+Synthesize the child outputs into a final summary.

@@ -1,0 +1,297 @@
+version: 1
+nodes:
+  - id: ticket_intake
+    kind: runtime
+    runtime: {runtime: claude, model: claude-fable-5-1, profile: reason}
+    config:
+      capabilities: [tickets_please.mutate]
+      context_sources: [{source: memory, options: {body: subagent}}]
+      prompt: >-
+        Bind the supplied project, phase, and ticket. Read the project summary,
+        phase summary when present, ticket, and comments. Search learnings for
+        the concrete task and rate every returned hit. Return one complete baton
+        preserving the input fields and adding ticket_context, memory_context,
+        constraints, and search_notes. Do not plan or change the workspace yet.
+    inlets: [{id: start, kind: message, schema: {type: object}}]
+    outlets: [{id: baton, kind: message, schema: {type: object, required: [ticket_id, project_slug]}}]
+    layout: {x: 40, y: 180}
+  - id: intake_proof
+    kind: builtin
+    builtin: {type: capability_assert}
+    config: {source_node: ticket_intake, package: tickets_please, tools: [get_project_summary, get_phase_summary, get_ticket, list_comments, search_learnings, rate_search_result], outlet: baton}
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: baton, kind: message, schema: {type: object}}]
+    layout: {x: 330, y: 180}
+  - id: research_route
+    kind: builtin
+    builtin: {type: switch}
+    config: {route: direct}
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: direct, kind: message, schema: {type: object}}, {id: grok, kind: message, schema: {type: object}}]
+    layout: {x: 600, y: 180}
+  - id: grok_challenge
+    kind: runtime
+    runtime: {runtime: grok, model: grok-4.5, profile: reason}
+    config:
+      prompt: >-
+        Challenge this ticket context from first principles. Return the complete
+        baton with a research_challenge containing concrete risks, alternatives,
+        and falsifiable checks. You have no tickets or workspace capability.
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: baton, kind: message, schema: {type: object, required: [ticket_id, research_challenge]}}]
+    layout: {x: 870, y: 40}
+  - id: fable_plan
+    kind: runtime
+    runtime: {runtime: claude, model: claude-fable-5-1, profile: reason}
+    config:
+      context_sources: [{source: memory, options: {body: subagent}}]
+      prompt: >-
+        Produce the smallest sound implementation approach from the supplied
+        ticket baton and optional Grok challenge. Return the complete baton with
+        approach, review_acceptance_checks, downstream_obligations, and open_questions.
+        review_acceptance_checks must contain only source-derived requirements
+        observable in the checkout and current check evidence before human approval.
+        Requirements for this run's ticket closure, completion_proof, and terminal
+        lifecycle belong only in downstream_obligations, which must be exactly
+        [ticket_completion, completion_proof, patch_completed]. Those are enforced
+        by Smith after approval, not by the reviewer. Do not turn research doubts
+        into new acceptance criteria or omit implementation requirements. Do not
+        touch the workspace.
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets:
+      - id: baton
+        kind: message
+        schema:
+          type: object
+          required: [ticket_id, approach, review_acceptance_checks, downstream_obligations]
+          properties:
+            review_acceptance_checks: {type: array, minItems: 1, items: {type: string, minLength: 1}}
+            downstream_obligations:
+              type: array
+              minItems: 3
+              maxItems: 3
+              uniqueItems: true
+              items: {type: string, enum: [ticket_completion, completion_proof, patch_completed]}
+    layout: {x: 1140, y: 180}
+  - id: codex_work
+    kind: runtime
+    runtime: {runtime: codex, model: gpt-5.6-sol, profile: work}
+    config:
+      workspace_mode: root
+      ticket_field: ticket_id
+      merge_input: true
+      output_fields: [doubts, changes, learnings, work_report]
+      attempts:
+        restart: on_failure
+        max_attempts: 2
+        retryable_reasons: [protocol_failure]
+        active_deadline: 30m
+        backoff: {initial: 1s, maximum: 1s, multiplier: 1}
+      context_sources: [{source: memory, options: {body: subagent}}]
+      prompt: >-
+        Own the workspace and implement the ticket against the supplied approach.
+        If this is a feedback pass, address the test, reviewer, or human decision
+        in the baton. Do not decide whether checks pass: Smith runs the configured
+        commands after you release the workspace. Return the complete baton with
+        doubts, changes, learnings, and work_report. The work_report must describe
+        what you implemented or inspected against each review_acceptance_check,
+        naming concrete file paths, symbols, and relevant test names. Include
+        findings even when no changes were needed; do not hide findings in doubts.
+        This report is a claim for reviewers to inspect, not measured check evidence.
+        Work against review_acceptance_checks;
+        downstream_obligations are engine-owned future events. Never edit source
+        to manufacture evidence that this run has already closed or completed.
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets:
+      - id: baton
+        kind: message
+        schema:
+          type: object
+          required: [ticket_id, doubts, changes, learnings, work_report]
+          properties:
+            learnings: {type: string, minLength: 10}
+            work_report: {type: string, minLength: 1}
+    layout: {x: 1430, y: 180}
+  - id: seal_handoff
+    kind: builtin
+    builtin: {type: workspace_handoff}
+    config: {source_node: codex_work, next_role: deterministic-checker, outlet: baton}
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: baton, kind: message, schema: {type: object, required: [workspace_handoff]}}]
+    layout: {x: 1720, y: 180}
+  - id: tests_route
+    kind: builtin
+    builtin: {type: check_router}
+    config: {passed_outlet: passed, repair_outlet: revise, failed_outlet: failed}
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: passed, kind: message, schema: {type: object}}, {id: revise, kind: message, schema: {type: object}}, {id: failed, kind: message, schema: {type: object}}]
+    layout: {x: 2290, y: 180}
+  - id: deterministic_checks
+    kind: builtin
+    builtin: {type: command_check}
+    config:
+      source_node: seal_handoff
+      env_profile: checks
+      timeout: 10m
+      max_memory_bytes: 4294967296
+      max_processes: 256
+      checks: []
+      outlet: baton
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: baton, kind: message, schema: {type: object, required: [checks_passed, check_run]}}]
+    layout: {x: 2010, y: 180}
+  - id: review_route
+    kind: builtin
+    builtin: {type: switch}
+    config: {route: fable}
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: fable, kind: message, schema: {type: object}}, {id: grok, kind: message, schema: {type: object}}]
+    layout: {x: 2570, y: 180}
+  - id: fable_review
+    kind: runtime
+    runtime: {runtime: claude, model: claude-fable-5-1, profile: inspect}
+    config:
+      merge_input: true
+      input_fields: [ticket_id, project_slug, review_acceptance_checks, human_decision, work_report, changes, doubts, checks_passed, check_run, workspace_handoff]
+      output_fields: [accepted, review_feedback]
+      record_decision: true
+      context_sources: [{source: memory, options: {body: subagent}}]
+      prompt: >-
+        Review the exact workspace handoff and evidence against the supplied
+        review_acceptance_checks. Use work_report as an inspection guide, not proof.
+        If human_decision is present with approved false, its reason is an
+        authoritative return from the human gate: treat each applicable item in it
+        as an outstanding requirement alongside review_acceptance_checks, address
+        every one explicitly in review_feedback, and do not accept while any remains
+        unresolved.
+        Inspect the checkout as needed. Judge observable
+        implementation and checks, not this run's future closure or terminal state.
+        Return ticket_id, accepted and review_feedback. Never edit the workspace.
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets:
+      - id: baton
+        kind: message
+        schema:
+          type: object
+          required: [ticket_id, accepted, review_feedback]
+          properties:
+            ticket_id: {type: string}
+            accepted: {type: boolean}
+            review_feedback: {type: string}
+    layout: {x: 2850, y: 80}
+  - id: grok_review
+    kind: runtime
+    runtime: {runtime: grok, model: grok-4.5, profile: inspect}
+    config:
+      merge_input: true
+      input_fields: [ticket_id, project_slug, review_acceptance_checks, human_decision, work_report, changes, doubts, checks_passed, check_run, workspace_handoff]
+      output_fields: [accepted, review_feedback]
+      record_decision: true
+      prompt: >-
+        Review the exact workspace handoff and evidence against the supplied
+        review_acceptance_checks. Use work_report as an inspection guide, not proof.
+        If human_decision is present with approved false, its reason is an
+        authoritative return from the human gate: treat each applicable item in it
+        as an outstanding requirement alongside review_acceptance_checks, address
+        every one explicitly in review_feedback, and do not accept while any remains
+        unresolved.
+        Judge observable implementation and checks, not
+        this run's future closure or terminal state. Return ticket_id, accepted and
+        review_feedback. Never edit the workspace and use no MCP capability.
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets:
+      - id: baton
+        kind: message
+        schema:
+          type: object
+          required: [ticket_id, accepted, review_feedback]
+          properties:
+            ticket_id: {type: string}
+            accepted: {type: boolean}
+            review_feedback: {type: string}
+    layout: {x: 2850, y: 300}
+  - id: review_decision
+    kind: builtin
+    builtin: {type: router}
+    config: {field: accepted, equals: true, true_outlet: accepted, false_outlet: revise}
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: accepted, kind: message, schema: {type: object}}, {id: revise, kind: message, schema: {type: object}}]
+    layout: {x: 3140, y: 180}
+  - id: human_gate
+    kind: builtin
+    builtin: {type: human_gate}
+    config: {prompt: approve this evidence-bearing ticket completion or redirect it, approved_outlet: approved, rejected_outlet: revise, decision_field: human_decision}
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: approved, kind: message, schema: {type: object}}, {id: revise, kind: message, schema: {type: object}}]
+    layout: {x: 3420, y: 180}
+  - id: ticket_close
+    kind: runtime
+    runtime: {runtime: claude, model: claude-fable-5-1, profile: reason}
+    config:
+      merge_input: true
+      output_fields: [ticket_state, completion_evidence]
+      capabilities: [tickets_please.mutate]
+      context_sources: [{source: memory, options: {body: subagent}}]
+      prompt: >-
+        Re-read the ticket before mutation, using the same ticket_id for every
+        call. If its column is todo or in_progress, call move_ticket with
+        target_column testing and a truthful comment, and require success before
+        calling complete_ticket. If already testing, skip the redundant move.
+        If done, unknown, or a read/transition fails, do not call complete_ticket.
+        The bridge rejects completion without this observed sequence; correct a
+        rejected sequence rather than blindly retrying. Complete exactly once using the real
+        tests, evidence, work summary, and durable learnings in this baton. Never
+        claim a check not present in evidence. Return the complete baton with
+        ticket_state set to done and completion_evidence summarising what was recorded.
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets:
+      - id: baton
+        kind: message
+        schema:
+          type: object
+          required: [ticket_id, ticket_state, completion_evidence]
+          properties:
+            ticket_state: {const: done}
+            completion_evidence: {type: string, minLength: 1}
+    layout: {x: 3700, y: 180}
+  - id: completion_proof
+    kind: builtin
+    builtin: {type: capability_assert}
+    config:
+      decision_sources: [fable_review, grok_review]
+      source_node: ticket_close
+      package: tickets_please
+      ticket_field: ticket_id
+      tools: [get_ticket, complete_ticket]
+      exactly_once: [complete_ticket]
+      conditional_tools:
+        - tool: move_ticket
+          before: complete_ticket
+          facts: {target_column: testing}
+          unless: {tool: get_ticket, fact: ticket_column, equals: testing}
+          otherwise: [todo, in_progress]
+      outlet: done
+    inlets: [{id: baton, kind: message, schema: {type: object}}]
+    outlets: [{id: done, kind: message, schema: {type: object}}]
+    layout: {x: 3990, y: 180}
+cords:
+  - {id: intake-proof, from: {node: ticket_intake, port: baton}, to: {node: intake_proof, port: baton}, delivery: {mode: enqueue}}
+  - {id: proof-research, from: {node: intake_proof, port: baton}, to: {node: research_route, port: baton}, delivery: {mode: enqueue}}
+  - {id: research-direct, from: {node: research_route, port: direct}, to: {node: fable_plan, port: baton}, delivery: {mode: enqueue}}
+  - {id: research-grok, from: {node: research_route, port: grok}, to: {node: grok_challenge, port: baton}, delivery: {mode: enqueue}}
+  - {id: grok-plan, from: {node: grok_challenge, port: baton}, to: {node: fable_plan, port: baton}, delivery: {mode: enqueue}}
+  - {id: plan-work, from: {node: fable_plan, port: baton}, to: {node: codex_work, port: baton}, delivery: {mode: enqueue}}
+  - {id: work-handoff, from: {node: codex_work, port: baton}, to: {node: seal_handoff, port: baton}, delivery: {mode: enqueue}}
+  - {id: handoff-checks, from: {node: seal_handoff, port: baton}, to: {node: deterministic_checks, port: baton}, delivery: {mode: enqueue}}
+  - {id: checks-tests, from: {node: deterministic_checks, port: baton}, to: {node: tests_route, port: baton}, delivery: {mode: enqueue}}
+  - {id: tests-revise, from: {node: tests_route, port: revise}, to: {node: codex_work, port: baton}, delivery: {mode: latest}}
+  - {id: tests-review, from: {node: tests_route, port: passed}, to: {node: review_route, port: baton}, delivery: {mode: enqueue}}
+  - {id: review-fable, from: {node: review_route, port: fable}, to: {node: fable_review, port: baton}, delivery: {mode: enqueue}}
+  - {id: review-grok, from: {node: review_route, port: grok}, to: {node: grok_review, port: baton}, delivery: {mode: enqueue}}
+  - {id: fable-decision, from: {node: fable_review, port: baton}, to: {node: review_decision, port: baton}, delivery: {mode: enqueue}}
+  - {id: grok-decision, from: {node: grok_review, port: baton}, to: {node: review_decision, port: baton}, delivery: {mode: enqueue}}
+  - {id: review-revise, from: {node: review_decision, port: revise}, to: {node: codex_work, port: baton}, delivery: {mode: latest}}
+  - {id: review-gate, from: {node: review_decision, port: accepted}, to: {node: human_gate, port: baton}, delivery: {mode: enqueue}}
+  - {id: human-revise, from: {node: human_gate, port: revise}, to: {node: codex_work, port: baton}, delivery: {mode: latest}}
+  - {id: human-close, from: {node: human_gate, port: approved}, to: {node: ticket_close, port: baton}, delivery: {mode: enqueue}}
+  - {id: close-proof, from: {node: ticket_close, port: baton}, to: {node: completion_proof, port: baton}, delivery: {mode: enqueue}}

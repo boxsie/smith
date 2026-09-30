@@ -1,0 +1,7 @@
+{"type":"thread.started","thread_id":"thread-completed"}
+{"type":"turn.started"}
+{"type":"item.started","item":{"id":"command-completed","type":"command_execution","command":"bash -lc 'printf done'","aggregated_output":"","exit_code":null,"status":"in_progress"}}
+{"type":"item.completed","item":{"id":"command-completed","type":"command_execution","command":"bash -lc 'printf done'","aggregated_output":"done","exit_code":0,"status":"completed"}}
+{"type":"item.completed","item":{"id":"change-completed","type":"file_change","changes":[{"path":"notes/result.txt","kind":"add"},{"path":"README.md","kind":"update"}],"status":"completed"}}
+{"type":"item.completed","item":{"id":"message-completed","type":"agent_message","text":"{\"result_json\":\"{\\\"answer\\\":42}\"}"}}
+{"type":"turn.completed","usage":{"input_tokens":10,"cached_input_tokens":0,"cache_write_input_tokens":0,"output_tokens":4,"reasoning_output_tokens":1}}

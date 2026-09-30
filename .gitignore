@@ -1,0 +1,40 @@
+# Binary
+/smith
+
+# Windows null device artifact
+nul
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Vendor (if not committed)
+/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.codex
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Smith runtime directories
+**/.smith/
+
+# Environment
+.env
+.env.*
+
+# local-only agent context
+CLAUDE.md

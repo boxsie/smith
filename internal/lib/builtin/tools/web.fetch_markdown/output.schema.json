@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "required": ["final_url", "status", "title", "markdown", "warnings"],
+  "properties": {
+    "final_url": { "type": "string" },
+    "status": { "type": "integer" },
+    "title": { "type": ["string", "null"] },
+    "markdown": { "type": "string" },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

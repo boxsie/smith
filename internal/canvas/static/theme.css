@@ -1,0 +1,93 @@
+/* The same instrument in daylight and at night. Canvas/signals stay stable;
+   frame, paper, controls and evidence surfaces share a semantic palette. */
+:root {
+  color-scheme: light;
+  --hover-face: #e2e9ed;
+  --selected-face: #dce6e9;
+  --action-face: #243e50;
+  --action-hover: #35586e;
+  --action-ink: #fff;
+  --context-face: #243e50;
+  --context-ink: #fff;
+  --focus: #208975;
+  --danger-ink: #8a2722;
+  --event-gate: #895804;
+  --event-failure: #9e312b;
+  --event-signal: #08676a;
+  --on-signal: #fff;
+  --on-fault: #fff;
+  --on-bang: #243e50;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --face-low: #101f2b;
+  --face: #192f40;
+  --ink: #dce8ef;
+  --muted: #a5bbc9;
+  --line: #3b5364;
+  --source-field: #142634;
+  --source-rule: #3b5364;
+  --source-line: #3b5364;
+  --signal: #61d8c3;
+  --signal-ink: #61d8c3;
+  --signal-pale: #b8dbd5;
+  --signal-low: #203f43;
+  --fault: #f29a90;
+  --hover-face: #294657;
+  --selected-face: #254b52;
+  --action-face: #31566b;
+  --action-hover: #3d657d;
+  --action-ink: #edf5f9;
+  --context-face: #142634;
+  --context-ink: #dce8ef;
+  --focus: #61d8c3;
+  --danger-ink: #f29a90;
+  --event-gate: #f5bf6b;
+  --event-failure: #f29a90;
+  --event-signal: #61d8c3;
+  --on-signal: #102a30;
+  --on-fault: #192f40;
+}
+#theme-toggle { flex-shrink: 0; font-size: 12px; padding: 6px 10px; }
+#theme-toggle[aria-pressed="true"] { background: var(--selected-face); color: var(--signal-ink); }
+button:hover { background: var(--hover-face); }
+button:focus-visible, a:focus-visible, summary:focus-visible,
+input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline-color: var(--focus);
+}
+.key, .source-search button, .source-error button, #gate-approve {
+  background: var(--action-face); border-color: var(--action-face); color: var(--action-ink);
+}
+.key:hover, .source-search button:hover, .source-error button:hover, #gate-approve:hover {
+  background: var(--action-hover); color: var(--action-ink);
+}
+.stop { color: var(--danger-ink); }
+.source-context { background: var(--context-face); color: var(--context-ink); }
+.notice { background: var(--action-face); color: var(--action-ink); }
+.notice.error { color: var(--on-fault); }
+.view-modes button[aria-pressed="true"], .source-toggle[aria-expanded="true"] {
+  background: var(--selected-face);
+  color: var(--ink);
+}
+.source-modes button[aria-pressed="true"], .source-search-kinds button[aria-pressed="true"], .approve {
+  color: var(--on-signal);
+}
+.reject { color: var(--on-fault); }
+.detail-number { color: var(--on-bang); }
+.source-search input, .inspector-form input, .inspector-form select,
+.inspector-form textarea, dialog input, dialog select, dialog textarea {
+  background: var(--face); color: var(--ink);
+}
+dialog { color: var(--ink); background: var(--face); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+.settings-copy pre { background: var(--face); }
+.source-empty, .gate-card pre { background: var(--face-low); }
+.port-row, .event, .inspector-content pre { border-color: var(--line); }
+.event.gate strong { color: var(--event-gate); }
+.event.failure strong { color: var(--event-failure); }
+.event.signal strong { color: var(--event-signal); }
+@media (max-width: 700px) {
+  .location-bar { gap: 10px; }
+  .location-bar .identity { min-width: 0; }
+  .location-bar .execution-kind { display: none; }
+}

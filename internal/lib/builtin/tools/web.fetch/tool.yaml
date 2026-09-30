@@ -1,0 +1,4 @@
+description: "Fetch one URL and return raw text content plus metadata"
+type: native
+timeout: 30s
+cache: never

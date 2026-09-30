@@ -1,0 +1,5 @@
+description: "Fetch a URL and return a concise structured summary"
+type: task
+source: web-summarize
+timeout: 2m
+cache: never

@@ -1,0 +1,4 @@
+description: "Fetch a URL and return readable markdown plus warnings"
+type: native
+timeout: 30s
+cache: never

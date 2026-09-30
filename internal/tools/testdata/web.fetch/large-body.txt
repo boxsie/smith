@@ -1,0 +1,3 @@
+This fixture stands in for a large response body.
+Repeat this content or stream it repeatedly in the test server when exercising body-size limits.
+The important part for T500 is that a deterministic local source file exists for the large-body scenario.

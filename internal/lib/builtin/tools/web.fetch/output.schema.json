@@ -1,0 +1,11 @@
+{
+  "type": "object",
+  "required": ["final_url", "status", "content_type", "title", "body"],
+  "properties": {
+    "final_url": { "type": "string" },
+    "status": { "type": "integer" },
+    "content_type": { "type": ["string", "null"] },
+    "title": { "type": ["string", "null"] },
+    "body": { "type": "string" }
+  }
+}

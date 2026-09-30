@@ -1,0 +1,5 @@
+{"type":"available_commands","tools":[],"commands":["compact","session-info"]}
+{"type":"thought","data":"Calculating."}
+{"type":"text","data":"{\"answer\":42}"}
+{"type":"usage","usage":{"input_tokens":100,"output_tokens":10,"cache_read_input_tokens":20,"cache_creation_input_tokens":5,"reasoning_tokens":4},"signature":"fixture"}
+{"type":"end","stopReason":"end_turn","sessionId":"smith-grok-session","requestId":"request-1","usage":{"input_tokens":100,"cache_read_input_tokens":20,"cache_creation_input_tokens":5,"output_tokens":10,"reasoning_tokens":4,"total_tokens":139},"num_turns":1,"total_cost_usd":0.01,"modelUsage":{"grok-4.5-build":{"inputTokens":100,"outputTokens":10,"cacheReadInputTokens":20,"cacheCreationInputTokens":5,"modelCalls":1,"costUSD":0.01}},"structuredOutput":{"answer":42}}
